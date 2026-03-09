@@ -296,9 +296,9 @@
 
           list.innerHTML = createItems(dayEvents);
 
-          if (dayEvents.length > 4) {
+          if (dayEvents.length >= 3) {
              list.innerHTML += createItems(dayEvents); 
-             const duration = dayEvents.length * 4; 
+             const duration = dayEvents.length * 3; 
              list.style.animationDuration = `${Math.max(15, duration)}s`;
              list.classList.add('animate-scroll');
           }
