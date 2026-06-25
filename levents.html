@@ -127,8 +127,25 @@
             const li = document.createElement('li');
             li.className = 'cursor-pointer py-1 px-2';
             li.innerHTML = cal.id.includes('b0228e24')
-              ? `<div class="event-title text-sm">${day} – ${startTime} – ${endTime}</div>`
-              : `<div class="event-title flex justify-between items-center"><span>${event.summary}</span><span class="rounded px-2 py-0.5 text-sm bg-white">${startTime} – ${endTime}</span></div>`;
+            ? `
+              <div class="event-title flex justify-between items-center">
+                <span>Justice of the Peace</span>
+                <span class="rounded px-2 py-0.5 text-sm bg-white">
+                  ${day}
+                </span>
+              </div>
+              <div class="text-sm text-gray-700 mt-1">
+                ${startTime} – ${endTime}
+              </div>
+            `
+            : `
+              <div class="event-title flex justify-between items-center">
+                <span>${event.summary}</span>
+                <span class="rounded px-2 py-0.5 text-sm bg-white">
+                  ${startTime} – ${endTime}
+                </span>
+              </div>
+            `;
             li.onclick = () => {
               document.getElementById('modal-summary').textContent = event.summary || 'No title';
               document.getElementById('modal-time').textContent = `${startTime} – ${endTime}`;
