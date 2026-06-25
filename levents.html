@@ -123,13 +123,20 @@
             const startTime = formatTime(event.start.dateTime || event.start.date);
             const endTime = formatTime(event.end.dateTime || event.end.date);
             const date = new Date(event.start.dateTime || event.start.date);
+            const displayTitle =
+            event.summary.toLowerCase().includes("cab")
+              ? "Citizens Advice Bureau"
+              : event.summary.toLowerCase().includes("jp") ||
+                event.summary.toLowerCase().includes("justice")
+              ? "Justice of the Peace"
+              : event.summary;
             const day = cal.id.includes('b0228e24') ? date.toLocaleDateString([], { weekday: 'long' }) : '';
             const li = document.createElement('li');
             li.className = 'cursor-pointer py-1 px-2';
             li.innerHTML = cal.id.includes('b0228e24')
             ? `
               <div class="event-title flex justify-between items-center">
-                <span>Justice of the Peace</span>
+                <span>${displaytitle}</span>
                 <span class="rounded px-2 py-0.5 text-sm bg-white">
                   ${day}, ${startTime} – ${endTime}
                 </span>
