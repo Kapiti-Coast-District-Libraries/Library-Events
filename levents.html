@@ -111,7 +111,7 @@
 
         const card = document.createElement('div');
         card.className = `${roomColor} border border-gray-300 p-4 rounded-lg shadow-md transition-transform hover:scale-[1.02]`;
-        card.innerHTML = `<h3 class="card-title mb-3">${cal.name}${cal.id.includes('b0228e24') ? ' (This Week)' : ''}</h3>`;
+        card.innerHTML = `<h3 class="card-title mb-3">${cal.name}</h3>`;
 
         if (events.length === 0) {
           card.innerHTML += `<p class="text-gray-600">No events${cal.id.includes('b0228e24') ? ' this week' : ' today'}</p>`;
