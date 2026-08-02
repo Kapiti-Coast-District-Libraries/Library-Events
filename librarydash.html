@@ -109,6 +109,7 @@
       'bf9774fd9a1f9cf44aff3d1ee97ef2a5e30789ef17f99ba846c3a780850f7e7a@group.calendar.google.com': 'bg-indigo-600',
       '583fc72e7af8b504711782c092a5e3c8ea73eda4d2e4d87128c0e78d471be68c@group.calendar.google.com': 'bg-purple-600',
       'b0228e246833cd5cafecfbbdda140afec688229319ee1a9643d5043abc0f2d46@group.calendar.google.com': 'bg-red-600',
+      '68efb142b09a12a042a99f6e03c83186222ce28b9a465cc5bef85d8dc522b594@group.calendar.google.com': 'bg-teal-600'
     };
 
     const calendars = [
@@ -119,6 +120,7 @@
       { id: 'bf9774fd9a1f9cf44aff3d1ee97ef2a5e30789ef17f99ba846c3a780850f7e7a@group.calendar.google.com', name: 'Tamariki space' },
       { id: '583fc72e7af8b504711782c092a5e3c8ea73eda4d2e4d87128c0e78d471be68c@group.calendar.google.com', name: 'Upstairs lounge' },
       { id: 'b0228e246833cd5cafecfbbdda140afec688229319ee1a9643d5043abc0f2d46@group.calendar.google.com', name: 'Community desk' },
+      { id: '68efb142b09a12a042a99f6e03c83186222ce28b9a465cc5bef85d8dc522b594@group.calendar.google.com', name: 'Genealogy desk' }
     ];
 
     // Set Date
@@ -179,7 +181,17 @@
         const card = document.createElement('div');
         card.className = `highlight-card p-4 rounded-xl shadow-lg flex flex-col`;
         const bgColorClass = roomColors[cal.id] || 'bg-gray-600';
-        const colorMap = { 'bg-blue-600': '#2563eb', 'bg-green-600': '#16a34a', 'bg-yellow-600': '#ca8a04', 'bg-pink-600': '#db2777', 'bg-indigo-600': '#4f46e5', 'bg-purple-600': '#9333ea', 'bg-red-600': '#dc2626', 'bg-gray-600': '#4b5563' };
+        const colorMap = { 
+          'bg-blue-600': '#2563eb', 
+          'bg-green-600': '#16a34a', 
+          'bg-yellow-600': '#ca8a04', 
+          'bg-pink-600': '#db2777', 
+          'bg-indigo-600': '#4f46e5', 
+          'bg-purple-600': '#9333ea', 
+          'bg-red-600': '#dc2626', 
+          'bg-teal-600': '#0d9488', 
+          'bg-gray-600': '#4b5563' 
+        };
         card.style.borderTop = `6px solid ${colorMap[bgColorClass]}`;
 
         let cardContent = '';
