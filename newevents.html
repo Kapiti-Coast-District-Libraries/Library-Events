@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paraparaumu Library Events</title>
+<!--
+  Paraparaumu Library events display (TV layout), as a single web page.
+  A backup of the Library Announcements app's TV layout: open this file in Chrome and press F
+  (or the Fullscreen button) for the TV. It reads the library's Google calendars directly,
+  refreshes every 5 minutes, keeps the last downloaded events when the internet is off, and
+  always shows New Zealand time whatever the computer's time zone.
+  Opening and closing times are deliberately not shown: they live in the app's timetable.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&family=Roboto:wght@400;700&display=swap">
+<style>
+  :root {
+    --page:#0E1621; --panel:#162230; --box:#131E2A; --rule:#2A394A; --text:#F1F5F9; --soft:#D7E0E9;
+    --muted:#A9B7C6; --faint:#8B9AAB; --teal:#45D6BC; --amber:#F5A524; --on-amber:#1A1206; --dot-off:#3A4A5C;
+    --condensed:"Roboto Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+    --sans:Roboto,"Helvetica Neue",Arial,sans-serif;
+    color-scheme: dark;
+  }
+  html, body { margin:0; height:100%; background:var(--page); overflow:hidden; }
+  body { font-family:var(--sans); color:var(--text); }
+  /* Everything is laid out at 1920×1080 (the app's mockup size) and scaled to fit the window. */
+  #stage { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0;
+           box-sizing:border-box; padding:44px 64px 36px; display:flex; flex-direction:column; }
+  .row { display:flex; } .col { display:flex; flex-direction:column; }
+  .condensed { font-family:var(--condensed); font-weight:700; }
+  header { display:flex; align-items:center; min-height:112px; }
+  .titles { flex:1; min-width:0; }
+  .name { font-size:58px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sub { font-size:26px; color:var(--muted); padding-top:4px; }
+  .clock { display:flex; align-items:flex-end; line-height:1; }
+  .clock .digits { font-size:104px; }
+  .clock .half { font-size:36px; padding:0 0 10px 8px; }
+  #notice { font-size:22px; color:#FFDA99; padding:0 0 10px; display:none; }
+  main { flex:1; display:flex; min-height:0; margin:24px 0 20px; gap:32px; }
+  .today { width:560px; flex:none; box-sizing:border-box; padding:28px 30px 26px; background:var(--panel);
+           border:2px solid var(--teal); border-radius:18px; display:flex; flex-direction:column; min-height:0; }
+  .panel-head { display:flex; align-items:flex-end; }
+  .panel-head .big { font-size:44px; flex:1; }
+  .panel-head .date { font-size:24px; color:var(--muted); }
+  .pager { flex:1; min-height:0; overflow:hidden; }
+  .today .pager { margin:20px 0 16px; }
+  .item { display:flex; padding-bottom:20px; cursor:pointer; }
+  .item .times { width:140px; flex:none; }
+  .item .start { font-size:24px; color:var(--soft); }
+  .item .end { font-size:20px; color:var(--muted); padding-top:4px; }
+  .item .words { flex:1; min-width:0; }
+  .item .title { font-size:30px; font-weight:700; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .meta { display:flex; align-items:center; padding-top:6px; min-width:0; }
+  .meta .room { font-size:22px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:10px; }
+  .on-now { font-size:17px; font-weight:700; letter-spacing:0.08em; color:var(--on-amber); background:var(--amber);
+            border-radius:999px; padding:4px 10px; margin-right:14px; white-space:nowrap; }
+  .dot { border-radius:50%; flex:none; display:inline-block; }
+  .rule { height:1px; background:var(--rule); flex:none; }
+  .label { font-size:20px; font-weight:700; letter-spacing:0.1em; color:var(--teal); padding:16px 0 8px; }
+  .free { font-size:22px; line-height:1.6; }
+  .free > span { display:inline-block; white-space:nowrap; margin-right:24px; }
+  .desks { font-size:21px; color:var(--muted); padding-top:10px; }
+  .empty { font-size:24px; color:var(--muted); }
+  .upcoming { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .upcoming .head { display:flex; align-items:flex-end; }
+  .upcoming .head .big { font-size:40px; }
+  .upcoming .head .note { font-size:22px; color:var(--muted); padding:0 0 4px 16px; }
+  .grid { flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:1fr 1fr; gap:16px; margin-top:16px; min-height:0; }
+  .day { background:var(--box); border-radius:16px; padding:18px 22px 14px; display:flex; flex-direction:column; min-height:0; min-width:0; }
+  .day .dhead { display:flex; align-items:center; }
+  .day .wd { font-size:32px; }
+  .day .dm { font-size:20px; color:var(--muted); padding-left:12px; flex:1; }
+  .day .pages { font-size:18px; color:var(--muted); white-space:nowrap; }
+  .day .pager { margin-top:12px; }
+  .ditem { padding-bottom:14px; cursor:pointer; }
+  .ditem .title { font-size:23px; font-weight:700; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .ditem .meta { padding-top:4px; }
+  .ditem .range { font-size:19px; color:var(--soft); white-space:nowrap; }
+  .ditem .room { font-size:19px; padding-left:8px; }
+  .day .empty { font-size:21px; }
+  footer { font-size:18px; color:var(--faint); }
+  /* Controls appear at the top when the mouse moves, as in the app. */
+  #controls { position:fixed; top:0; left:0; right:0; display:flex; gap:12px; padding:12px; opacity:0;
+              transition:opacity .3s; pointer-events:none; z-index:5; }
+  #controls.show { opacity:1; pointer-events:auto; }
+  #controls button { flex:1; font:500 16px var(--sans); color:var(--text); background:#2A3B4D; border:0; border-radius:10px; padding:12px; cursor:pointer; }
+  #controls button:hover { background:#34495F; }
+  #details { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:10; padding:16px; }
+  #details.show { display:flex; }
+  #details .card { background:var(--panel); border:1px solid var(--rule); border-radius:16px; max-width:640px; width:100%;
+                   max-height:80vh; overflow:auto; padding:24px 28px; box-sizing:border-box; }
+  #details h2 { margin:0 0 8px; font:700 26px var(--sans); }
+  #details p { margin:6px 0; font-size:18px; color:var(--soft); white-space:pre-wrap; }
+  #details .muted { color:var(--muted); }
+  #details button { margin-top:16px; font:500 16px var(--sans); color:var(--text); background:#2A3B4D; border:0; border-radius:10px; padding:10px 18px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="controls"><button id="refresh">Refresh</button><button id="fullscreen">Fullscreen</button></div>
+<div id="stage"></div>
+<div id="details" role="dialog" aria-modal="true"><div class="card"><h2 id="d-title"></h2><p id="d-when"></p><p id="d-room" class="muted"></p><p id="d-location" class="muted"></p><p id="d-description"></p><button id="d-close">Close</button></div></div>
+<script>
+"use strict";
+// ---------- The library's calendars (same as the app) ----------
+const API_KEY = "AIzaSyD2qBhlb_rQHGh3kJ_ENFrxsRoFFmfrX8A";
+const FEEDS = [
+  {id:"paraparaumumake@gmail.com", name:"Flexi space", color:"#2563EB", room:true},
+  {id:"9d751487e4a33f27971ca1b54bd27d82b56d39278aabd6bcb562c431979396a2@group.calendar.google.com", name:"Upstairs learning", color:"#DB2777", room:true},
+  {id:"99cb749e0421c837039bebfa2773ec2b696f4cbb5c8e1db0a27f071c38e871be@group.calendar.google.com", name:"Makerspace", color:"#16A34A", room:true},
+  {id:"b952fc7ae8ea23d6f8648ee78ec4bbe830ecd5aa55266eb5a715bbcd3129718a@group.calendar.google.com", name:"Ground floor lounge", color:"#CA8A04", room:true},
+  {id:"bf9774fd9a1f9cf44aff3d1ee97ef2a5e30789ef17f99ba846c3a780850f7e7a@group.calendar.google.com", name:"Tamariki space", color:"#4F46E5", room:true},
+  {id:"583fc72e7af8b504711782c092a5e3c8ea73eda4d2e4d87128c0e78d471be68c@group.calendar.google.com", name:"Upstairs lounge", color:"#9333EA", room:true},
+  {id:"b0228e246833cd5cafecfbbdda140afec688229319ee1a9643d5043abc0f2d46@group.calendar.google.com", name:"Community desk", color:"#DC2626", room:true},
+  {id:"68efb142b09a12a042a99f6e03c83186222ce28b9a465cc5bef85d8dc522b594@group.calendar.google.com", name:"Genealogy desk", color:"#0D9488", room:true},
+  {id:"ba94f4998ac221d286cc6fbb3b8dad11ca3148b14968d1353df62eeff25c2184@group.calendar.google.com", name:"Private events", color:"#374151", room:false}
+];
+const DAYS = 7, REFRESH_MS = 5 * 60000, RETRY_MS = [30000, 60000, 120000, 300000], PAGE_MS = 8000;
+const SAVED_KEY = "library-events-saved";
+const isDesk = f => f.name.toLowerCase().includes("desk");
+
+// ---------- New Zealand time, whatever the computer's time zone ----------
+const ZONE = "Pacific/Auckland";
+const partsFmt = new Intl.DateTimeFormat("en-NZ", {timeZone:ZONE, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23"});
+function nz(ms) {
+  const p = {}; for (const x of partsFmt.formatToParts(new Date(ms))) p[x.type] = x.value;
+  return {y:+p.year, mo:+p.month, d:+p.day, h:+p.hour, mi:+p.minute, key:`${p.year}-${p.month}-${p.day}`};
+}
+/** The instant of NZ midnight starting the given "YYYY-MM-DD" day. */
+function nzMidnight(key) {
+  const [y, mo, d] = key.split("-").map(Number);
+  let guess = Date.UTC(y, mo - 1, d);
+  for (let i = 0; i < 3; i++) { const p = nz(guess); guess -= (Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi) - Date.UTC(y, mo - 1, d)); }
+  return guess;
+}
+function addDays(key, n) { const [y, mo, d] = key.split("-").map(Number); const t = new Date(Date.UTC(y, mo - 1, d + n)); return t.toISOString().slice(0, 10); }
+const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function dayInfo(key) { const [y, mo, d] = key.split("-").map(Number); const wd = new Date(Date.UTC(y, mo - 1, d)).getUTCDay(); return {wd, d, mo}; }
+const longDate = key => { const i = dayInfo(key); return `${WEEKDAYS[i.wd]} ${i.d} ${MONTHS[i.mo - 1]}`; };
+const shortDate = key => { const i = dayInfo(key); return `${WEEKDAYS[i.wd].slice(0, 3)} ${i.d} ${MONTHS[i.mo - 1].slice(0, 3)}`; };
+// "9am", "4:45pm", "12pm"; and "10:30–11:30am", "9am–5pm" as on the app.
+const bare = (h, m) => `${h % 12 === 0 ? 12 : h % 12}${m === 0 ? "" : ":" + String(m).padStart(2, "0")}`;
+const clock = ms => { const p = nz(ms); return bare(p.h, p.mi) + (p.h < 12 ? "am" : "pm"); };
+function range(a, b) {
+  if (a === b) return clock(a);
+  const pa = nz(a), pb = nz(b);
+  return ((pa.h < 12) === (pb.h < 12) ? bare(pa.h, pa.mi) : clock(a)) + "–" + clock(b);
+}
+
+// ---------- Calendar data ----------
+function plainText(html) {
+  if (!html) return "";
+  const doc = new DOMParser().parseFromString(html.replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, "\n").replace(/<li[^>]*>/gi, "• "), "text/html");
+  return (doc.body.textContent || "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+/** One feed's items into events. A cancelled or malformed entry is skipped on its own. */
+function parse(feed, items) {
+  const events = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    try {
+      if (!item || item.status === "cancelled" || !item.start) continue;
+      const allDay = !item.start.dateTime;
+      const when = v => v ? (v.dateTime ? Date.parse(v.dateTime) : (v.date ? nzMidnight(v.date) : NaN)) : NaN;
+      const start = when(item.start); let end = when(item.end);
+      if (isNaN(start)) continue;
+      if (isNaN(end) || end <= start) end = allDay ? nzMidnight(addDays(nz(start).key, 1)) : start;
+      const title = (typeof item.summary === "string" && item.summary.trim()) || "No title";
+      events.push({feed, title, allDay, start, end,
+        location: typeof item.location === "string" ? item.location.trim() : "",
+        description: typeof item.description === "string" ? plainText(item.description) : ""});
+    } catch (e) { /* skip just this one */ }
+  }
+  return events;
+}
+let snapshot = null; // {savedAt, raw:{feedId: items}, events:{feedId: [event]}}
+function fromRaw(raw, savedAt) {
+  const events = {};
+  for (const f of FEEDS) events[f.id] = parse(f, raw && raw[f.id]);
+  return {savedAt, raw, events};
+}
+function loadSaved() {
+  try { const s = JSON.parse(localStorage.getItem(SAVED_KEY)); if (s && s.savedAt && s.feeds) return fromRaw(s.feeds, s.savedAt); } catch (e) {}
+  return null;
+}
+function save(snap) { try { localStorage.setItem(SAVED_KEY, JSON.stringify({savedAt:snap.savedAt, feeds:snap.raw})); } catch (e) {} }
+
+async function fetchJson(url) {
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(url, {signal:ctl.signal, cache:"no-store", redirect:"error"});
+    if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) { const e = new Error("rejected"); e.rejected = true; throw e; }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(timer); }
+}
+/** All feeds for seven days from NZ midnight today. A calendar Google refuses keeps its previous events. */
+async function download() {
+  const today = nz(Date.now()).key;
+  const from = new Date(nzMidnight(today)).toISOString(), to = new Date(nzMidnight(addDays(today, DAYS))).toISOString();
+  const raw = {}; let rejected = 0;
+  await Promise.all(FEEDS.map(async f => {
+    const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(f.id)}/events?key=${API_KEY}`
+      + `&timeMin=${encodeURIComponent(from)}&timeMax=${encodeURIComponent(to)}&singleEvents=true&orderBy=startTime&maxResults=250`;
+    try {
+      let items = [], page = null, pages = 0;
+      do {
+        const r = await fetchJson(page ? base + "&pageToken=" + encodeURIComponent(page) : base);
+        if (Array.isArray(r.items)) items = items.concat(r.items);
+        page = r.nextPageToken || null;
+      } while (page && ++pages < 8);
+      raw[f.id] = items;
+    } catch (e) {
+      if (!e.rejected) throw e;
+      rejected++; raw[f.id] = snapshot && snapshot.raw ? snapshot.raw[f.id] || [] : [];
+    }
+  }));
+  if (rejected === FEEDS.length) throw new Error("every calendar was refused");
+  return fromRaw(raw, Date.now());
+}
+
+let loading = false, failures = 0, refreshTimer = null;
+async function refresh() {
+  if (loading) return;
+  loading = true; clearTimeout(refreshTimer);
+  if (!snapshot) notice("Loading events…");
+  try {
+    const fresh = await download();
+    snapshot = fresh; save(fresh); failures = 0; notice("");
+    refreshTimer = setTimeout(refresh, REFRESH_MS);
+  } catch (e) {
+    notice(unavailable());
+    refreshTimer = setTimeout(refresh, RETRY_MS[Math.min(failures++, RETRY_MS.length - 1)]);
+  } finally { loading = false; render(); }
+}
+function unavailable() {
+  const saved = snapshot ? ` Showing events saved ${shortDate(nz(snapshot.savedAt).key)} at ${clock(snapshot.savedAt)}.` : "";
+  return "Can't reach Google Calendar." + saved + " If the library Wi-Fi needs its terms accepted, accept them in Chrome — events update automatically.";
+}
+let noticeText = "";
+function notice(text) { noticeText = text; const n = document.getElementById("notice"); if (n) { n.textContent = text; n.style.display = text ? "block" : "none"; } }
+
+// ---------- Drawing ----------
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function dot(color, size) { const d = el("span", "dot"); d.style.cssText = `width:${size}px;height:${size}px;background:${color}`; return d; }
+
+/** Every event placed on each day it runs, for seven days from {@code first}, in start order. */
+function week(first) {
+  const firstStart = nzMidnight(first), days = Array.from({length:DAYS}, () => []);
+  for (const f of FEEDS) for (const e of snapshot.events[f.id] || []) {
+    const lastKey = nz(e.end > e.start ? e.end - 1 : e.start).key;
+    for (let i = 0; i < DAYS; i++) {
+      const key = addDays(first, i);
+      if (key >= nz(e.start).key && key <= lastKey) days[i].push(e);
+    }
+  }
+  return days.map(list => list.sort((a, b) => a.start - b.start || a.title.localeCompare(b.title)));
+}
+
+let page = 0;
+const pagers = [];
+function render() {
+  try { draw(); } catch (e) { console.error(e); notice("Part of the events display could not be shown. It will retry automatically."); }
+}
+function draw() {
+  const now = Date.now(), today = nz(now).key, stage = document.getElementById("stage");
+  pagers.length = 0;
+  stage.replaceChildren();
+
+  const header = el("header");
+  const titles = el("div", "titles");
+  titles.append(el("div", "name condensed", "Paraparaumu Library"), el("div", "sub", longDate(today) + " · What's on"));
+  header.append(titles, clockView(now));
+  stage.append(header);
+  const n = el("div", null, noticeText); n.id = "notice"; n.style.display = noticeText ? "block" : "none"; stage.append(n);
+
+  const main = el("main");
+  main.append(todayPanel(now, today), upcoming(today));
+  stage.append(main);
+  stage.append(el("footer", null, snapshot ? `From the library's room calendars · updated ${clock(snapshot.savedAt)}` : ""));
+  requestAnimationFrame(() => pagers.forEach(p => p.paginate()));
+}
+function clockView(now) {
+  const p = nz(now), c = el("div", "clock condensed");
+  c.append(el("span", "digits", `${p.h % 12 === 0 ? 12 : p.h % 12}:${String(p.mi).padStart(2, "0")}`), el("span", "half", p.h < 12 ? "am" : "pm"));
+  return c;
+}
+function todayPanel(now, today) {
+  const panel = el("section", "today");
+  const head = el("div", "panel-head");
+  head.append(el("div", "big condensed", "Today"), el("div", "date", shortDate(today)));
+  panel.append(head);
+  const dayStart = nzMidnight(today), dayEnd = nzMidnight(addDays(today, 1));
+  const events = [], busy = new Set();
+  if (snapshot) for (const f of FEEDS) for (const e of snapshot.events[f.id] || []) {
+    if (e.start >= dayEnd || e.end <= dayStart || e.end <= now) continue; // Finished events drop off.
+    events.push(e); if (e.start <= now) busy.add(f.id);
+  }
+  events.sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
+  const list = pager(null);
+  for (const e of events) list.add(todayItem(e, now));
+  if (!events.length) list.add(el("div", "empty", snapshot ? "No more events today" : "Loading events…"));
+  panel.append(list.node);
+  panel.append(el("div", "rule"), el("div", "label", "FREE TO USE NOW"));
+  const free = el("div", "free"), idleDesks = [];
+  for (const f of FEEDS) {
+    if (!f.room || busy.has(f.id)) continue;
+    if (isDesk(f)) { idleDesks.push(f.name); continue; }
+    const s = el("span"); const d = el("span", null, "● "); d.style.color = f.color; s.append(d, f.name); free.append(s);
+  }
+  if (!free.childNodes.length) free.textContent = snapshot ? "Every room is in use" : "—";
+  panel.append(free);
+  if (idleDesks.length) panel.append(el("div", "desks", "Not in session: " + idleDesks.join(", ")));
+  return panel;
+}
+function todayItem(e, now) {
+  const item = el("div", "item"), times = el("div", "times");
+  times.append(el("div", "start", e.allDay ? "All day" : clock(e.start)));
+  if (!e.allDay && e.end !== e.start) times.append(el("div", "end", "to " + clock(e.end)));
+  const words = el("div", "words"), meta = el("div", "meta");
+  words.append(el("div", "title", e.title));
+  if (e.start <= now) meta.append(el("span", "on-now", "ON NOW"));
+  meta.append(dot(e.feed.color, 14), el("span", "room", e.feed.room ? e.feed.name : "Private event"));
+  words.append(meta);
+  item.append(times, words);
+  item.onclick = () => showDetails(e);
+  return item;
+}
+function upcoming(today) {
+  const section = el("section", "upcoming"), head = el("div", "head");
+  head.append(el("div", "big condensed", "Coming up"), el("div", "note", "next 6 days"));
+  section.append(head);
+  const grid = el("div", "grid"), days = snapshot ? week(today) : null;
+  for (let i = 1; i <= 6; i++) {
+    const key = addDays(today, i), box = el("div", "day"), dh = el("div", "dhead"), pages = el("div", "pages");
+    dh.append(el("div", "wd condensed", WEEKDAYS[dayInfo(key).wd].slice(0, 3)), el("div", "dm", `${dayInfo(key).d} ${MONTHS[dayInfo(key).mo - 1].slice(0, 3)}`), pages);
+    box.append(dh);
+    const list = pager(pages), events = days ? days[i] : [];
+    for (const e of events) {
+      const item = el("div", "ditem"), meta = el("div", "meta");
+      item.append(el("div", "title", e.title));
+      meta.append(el("span", "range", e.allDay ? "All Day" : range(e.start, e.end)));
+      const d = dot(e.feed.color, 11); d.style.margin = "0 0 0 10px"; meta.append(d, el("span", "room", e.feed.room ? e.feed.name : "Private event"));
+      item.append(meta); item.onclick = () => showDetails(e);
+      list.add(item);
+    }
+    if (!events.length) list.add(el("div", "empty", snapshot ? "No events" : ""));
+    box.append(list.node); grid.append(box);
+  }
+  section.append(grid);
+  return section;
+}
+/** Shows as many whole items as fit, then turns to the next set every 8 seconds instead of scrolling. */
+function pager(indicator) {
+  const node = el("div", "pager"), items = []; let starts = [0];
+  const p = {
+    node,
+    add(item) { items.push(item); node.append(item); },
+    paginate() {
+      const height = node.clientHeight; if (!height || !items.length) return;
+      items.forEach(i => i.style.display = "");
+      starts = [0]; let used = 0;
+      items.forEach((item, i) => { const h = item.offsetHeight; if (used > 0 && used + h > height) { starts.push(i); used = 0; } used += h; });
+      p.show();
+    },
+    show() {
+      const current = ((page % starts.length) + starts.length) % starts.length, from = starts[current], to = starts[current + 1] ?? items.length;
+      items.forEach((item, i) => item.style.display = i >= from && i < to ? "" : "none");
+      if (!indicator) return;
+      indicator.replaceChildren();
+      if (starts.length < 2) return;
+      starts.forEach((_, i) => { const d = el("span", null, "●"); d.style.color = i === current ? "var(--text)" : "var(--dot-off)"; indicator.append(d); });
+      indicator.append(`  ${current + 1} / ${starts.length}`);
+    }
+  };
+  pagers.push(p);
+  return p;
+}
+
+// ---------- Details popup ----------
+let detailsTimer = null;
+function showDetails(e) {
+  const when = e.allDay ? `${shortDate(nz(e.start).key)}${nz(e.end - 1).key !== nz(e.start).key ? " – " + shortDate(nz(e.end - 1).key) : ""} · All Day`
+    : `${shortDate(nz(e.start).key)} · ${range(e.start, e.end)}${nz(e.end).key !== nz(e.start).key ? " (" + shortDate(nz(e.end).key) + ")" : ""}`;
+  document.getElementById("d-title").textContent = e.title;
+  document.getElementById("d-when").textContent = when;
+  document.getElementById("d-room").textContent = e.feed.room ? e.feed.name : "Private event";
+  document.getElementById("d-location").textContent = e.location;
+  document.getElementById("d-description").textContent = e.description;
+  document.getElementById("details").classList.add("show");
+  clearTimeout(detailsTimer); detailsTimer = setTimeout(closeDetails, 120000); // Never stuck on a popup.
+}
+function closeDetails() { document.getElementById("details").classList.remove("show"); }
+document.getElementById("d-close").onclick = closeDetails;
+document.getElementById("details").onclick = ev => { if (ev.target.id === "details") closeDetails(); };
+
+// ---------- Scaling, controls and timers ----------
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080), stage = document.getElementById("stage");
+  stage.style.transform = `scale(${s})`;
+  stage.style.left = `${(innerWidth - 1920 * s) / 2}px`; stage.style.top = `${(innerHeight - 1080 * s) / 2}px`;
+}
+addEventListener("resize", () => { fit(); render(); });
+const controls = document.getElementById("controls"); let hideTimer = null;
+function showControls() { controls.classList.add("show"); clearTimeout(hideTimer); hideTimer = setTimeout(() => controls.classList.remove("show"), 4000); }
+addEventListener("mousemove", showControls); addEventListener("touchstart", showControls, {passive:true});
+document.getElementById("refresh").onclick = () => { failures = 0; refresh(); };
+function toggleFullscreen() {
+  try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+}
+document.getElementById("fullscreen").onclick = toggleFullscreen;
+addEventListener("keydown", ev => { if (ev.key === "f" || ev.key === "F") toggleFullscreen(); if (ev.key === "Escape") closeDetails(); if (ev.key === "r" || ev.key === "R") { failures = 0; refresh(); } });
+addEventListener("online", () => { failures = 0; refresh(); }); // Wi-Fi terms accepted: update straight away.
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !loading && (!snapshot || Date.now() - snapshot.savedAt > REFRESH_MS)) refresh(); });
+
+// The clock and "on now" follow the minute; a new day redraws and downloads.
+let shownMinute = "", shownDay = nz(Date.now()).key;
+setInterval(() => {
+  const p = nz(Date.now()), minute = p.key + p.h + ":" + p.mi;
+  if (p.key !== shownDay) { shownDay = p.key; failures = 0; refresh(); }
+  if (minute !== shownMinute) { shownMinute = minute; render(); }
+}, 5000);
+setInterval(() => { page++; pagers.forEach(p => p.show()); }, PAGE_MS);
+// A download that hangs is abandoned so the display never stops updating.
+setInterval(() => { if (loading && snapshot && Date.now() - snapshot.savedAt > 30 * 60000) { loading = false; refresh(); } }, 60000);
+
+fit();
+snapshot = loadSaved();
+render();
+refresh();
+</script>
+</body>
+</html>
